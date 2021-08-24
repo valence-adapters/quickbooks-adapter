@@ -1,0 +1,3 @@
+[submodule "force-app/main/default/lwc/valenceUIConfigurator"]
+	path = force-app/main/default/lwc/valenceUIConfigurator
+	url = https://github.com/valence-filters/valence-ui-configurator
