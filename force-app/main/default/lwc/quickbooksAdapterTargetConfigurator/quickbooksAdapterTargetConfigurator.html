@@ -1,0 +1,151 @@
+<!-- Quickbooks Adapter Target Configurator -->
+<template>
+	<div class="slds-p-right_large">
+
+		<p class="slds-m-vertical_small">Whenever we write to Quickbooks the entire Quickbooks record is available in the response.</p>
+
+		<p class="slds-m-vertical_small">Here you can configure grabbing certain fields from that response to reflect back onto the Salesforce record we just sent to Quickbooks. This is called a "writeback".</p>
+
+		<!-- @formatter:off -->
+		<p class="slds-m-vertical_small"><strong>Note</strong>: The most common thing you'll do with a writeback is take the Quickbooks <strong>Id</strong> value and save it back to Salesforce for future use.</p>
+		<!-- @formatter:on -->
+
+		<lightning-card title="Main Record">
+
+			<lightning-button label="Add Writeback" onclick={addMainPair} slot="actions"></lightning-button>
+
+			<p class="slds-m-around_small">Here you can add fields you want to pull from Quickbooks back to the Salesforce record we just sent over.</p>
+
+			<lightning-layout multiple-rows="true">
+				<template for:each={configuration.mainPairs} for:item="pair" for:index="index">
+
+					<lightning-layout-item key={pair.qbo} size="5" padding="around-small">
+						<lightning-input label="Quickbooks Field"
+										 name="qbo"
+										 data-index={index}
+										 value={pair.qbo}
+										 onchange={longDebouncePairUpdate}
+										 onblur={updatePairImmediately}
+										 placeholder="Quickbooks field..."></lightning-input>
+					</lightning-layout-item>
+
+					<lightning-layout-item key={pair.qbo} size="5" padding="around-small">
+						<lightning-input label="Salesforce Field"
+										 name="sf"
+										 data-index={index}
+										 value={pair.sf}
+										 onchange={longDebouncePairUpdate}
+										 onblur={updatePairImmediately}
+										 placeholder="Writes to..."></lightning-input>
+					</lightning-layout-item>
+
+					<lightning-layout-item key={pair.qbo} size="2" padding="around-small">
+						<div class="slds-m-top_large">
+							<lightning-button-icon icon-name="utility:close"
+												   alternative-text="Remove this item"
+												   value={index}
+												   onclick={removeMainPair}></lightning-button-icon>
+						</div>
+					</lightning-layout-item>
+
+				</template>
+			</lightning-layout>
+
+		</lightning-card>
+
+		<br />
+
+		<lightning-card title="Nested Records">
+
+			<lightning-button label="Add Inner List" onclick={addListSection} slot="actions"></lightning-button>
+
+			<p class="slds-m-around_small">Often when writing to Quickbooks we're sending a header record and some line items. Here you can set up writebacks for those inner Salesforce child records.</p>
+
+			<!-- @formatter:off -->
+			<p class="slds-m-around_small">For example, if we were writing <strong>Invoice__c</strong> and nested <strong>InvoiceLineItem__c</strong> records to Quickbook's Invoice entity, you would configure this section in order to update those <strong>InvoiceLineItem__c</strong> records.</p>
+			<!-- @formatter:on -->
+
+			<template for:each={configuration.listPairs} for:item="section" for:index="sectionIndex">
+
+				<lightning-card class="slds-m-horizontal_small" key={section.qboListFieldName} title="Inner List">
+					<lightning-button-group slot="actions">
+						<lightning-button label="Add Writeback" onclick={addListPair} value={sectionIndex}></lightning-button>
+						<lightning-button label="Remove Inner List" onclick={removeListSection} value={sectionIndex}></lightning-button>
+					</lightning-button-group>
+
+					<div class="slds-m-horizontal_small">
+
+						<lightning-input label="Quickbooks List Field"
+										 name="qboListFieldName"
+										 data-section-index={sectionIndex}
+										 value={section.qboListFieldName}
+										 onchange={longDebounceMetaUpdate}
+										 onblur={updateMetaImmediately}
+										 field-level-help="The name of the field on the Quickbooks side that has the inner list of records we want to extract values from."
+										 placeholder="Quickbooks field, typically 'Line'..."></lightning-input>
+
+						<lightning-input label="Salesforce List Field"
+										 name="sfListFieldName"
+										 data-section-index={sectionIndex}
+										 value={section.sfListFieldName}
+										 onchange={longDebounceMetaUpdate}
+										 onblur={updateMetaImmediately}
+										 field-level-help="The name of the field inside each of our main Salesforce records where we can find the inner SObject children to write back to."
+										 placeholder="Salesforce field, something like 'InvoiceLineItems__r'..."></lightning-input>
+
+						<lightning-input label="Salesforce Object Name"
+										 name="sfObjectName"
+										 data-section-index={sectionIndex}
+										 value={section.sfObjectName}
+										 onchange={longDebounceMetaUpdate}
+										 onblur={updateMetaImmediately}
+										 field-level-help="What are the Salesforce inner records? Contact? InvoiceLineItem__c?"
+										 placeholder="Salesforce object name, like 'OpportunityLineItem' or 'InvoiceLineItem__c'..."></lightning-input>
+
+						<lightning-layout multiple-rows="true">
+							<template for:each={section.pairs} for:item="pair" for:index="pairIndex">
+
+								<lightning-layout-item key={pair.qbo} size="5" padding="around-small">
+									<lightning-input label="Quickbooks Field"
+													 name="qbo"
+													 data-section-index={sectionIndex}
+													 data-index={pairIndex}
+													 value={pair.qbo}
+													 onchange={longDebouncePairUpdate}
+													 onblur={updatePairImmediately}
+													 placeholder="Quickbooks field..."></lightning-input>
+								</lightning-layout-item>
+
+								<lightning-layout-item key={pair.qbo} size="5" padding="around-small">
+									<lightning-input label="Salesforce Field"
+													 name="sf"
+													 data-section-index={sectionIndex}
+													 data-index={pairIndex}
+													 value={pair.sf}
+													 onchange={longDebouncePairUpdate}
+													 onblur={updatePairImmediately}
+													 placeholder="Writes to..."></lightning-input>
+								</lightning-layout-item>
+
+								<lightning-layout-item key={pair.qbo} size="2" padding="around-small">
+									<div class="slds-m-top_large">
+										<lightning-button-icon icon-name="utility:close"
+															   alternative-text="Remove this item"
+															   data-section-index={sectionIndex}
+															   value={pairIndex}
+															   onclick={removeListPair}></lightning-button-icon>
+									</div>
+								</lightning-layout-item>
+
+							</template>
+						</lightning-layout>
+
+					</div>
+
+				</lightning-card>
+			</template>
+
+		</lightning-card>
+
+	</div>
+</template>

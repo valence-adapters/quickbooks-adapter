@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AuthProvider xmlns="http://soap.sforce.com/2006/04/metadata">
+    <authorizeUrl>https://appcenter.intuit.com/connect/oauth2</authorizeUrl>
+    <consumerKey>Q0Ctwn97qGxO5lRqqUfiUXcKVr4yIrIRPVS7QFZeYlI8zjl8c3</consumerKey>
+    <consumerSecret>wy3q8Ce29Nq6sUKaAIwmLtAPBvAZkF6cW+2yizCDD6TBvYj7EtVDu3BBGPdiC2rX</consumerSecret>
+    <defaultScopes>com.intuit.quickbooks.accounting</defaultScopes>
+    <friendlyName>QuickbooksAuth</friendlyName>
+    <includeOrgIdInIdentifier>false</includeOrgIdInIdentifier>
+    <providerType>OpenIdConnect</providerType>
+    <sendAccessTokenInHeader>true</sendAccessTokenInHeader>
+    <sendClientCredentialsInHeader>false</sendClientCredentialsInHeader>
+    <sendSecretInApis>true</sendSecretInApis>
+    <tokenUrl>https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer</tokenUrl>
+</AuthProvider>
