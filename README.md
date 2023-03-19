@@ -28,6 +28,8 @@ Connects Valence and Quickbooks Online, an accounting and bookkeeping platform. 
 
 In the Adapter package are an Auth Provider record with a pre-registered Valence app for Quickbooks, and a Named Credential that uses it. To link to your own Quickbooks org navigate to the Named Credential in the Setup menu in Salesforce, and start the authentication flow to set up the handshake with Quickbooks.
 
+![Starting the authentication flow](/images/start_authentication_flow.png)
+
 In addition to the Named Credential you will need the "realm id" (also called the "company id"), a unique value that represents your Quickbooks organization. Put this key in the configuration fields (repeated twice) on the Quickbooks Online Adapter Custom Metadata Record (go to Valence Adapters -> Manage Records in the Custom Metadata Types section of the Salesforce Setup menu).
 
 ![Adding your QBO Realm Id](/images/adding_the_realm_id.png)
