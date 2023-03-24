@@ -15,7 +15,7 @@ export default class QuickbooksAdapterTargetConfigurator extends ValenceUIConfig
 	// -------------------------------------------
 
 	addMainPair() {
-		this.configuration.mainPairs.push({'qbo' : null, 'sf' : null});
+		this.configuration.mainPairs.push({'qbo' : '<field>', 'sf' : null});
 		this.configUpdated(); // propagate our configuration changes
 	}
 
@@ -35,7 +35,7 @@ export default class QuickbooksAdapterTargetConfigurator extends ValenceUIConfig
 	}
 
 	addListPair(event) {
-		this.configuration.listPairs[event.target.value].pairs.push({'qbo' : null, 'sf' : null});
+		this.configuration.listPairs[event.target.value].pairs.push({'qbo' : '<field>', 'sf' : null});
 		this.configUpdated(); // propagate our configuration changes
 	}
 
