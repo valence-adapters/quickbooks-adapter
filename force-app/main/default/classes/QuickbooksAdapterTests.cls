@@ -8,8 +8,8 @@ private class QuickbooksAdapterTests implements HttpCalloutMock {
 	static void testTables() {
 		List<valence.Table> tables = new QuickbooksAdapter().getTables();
 		System.assertEquals(2, tables.size());
-		System.assertEquals('Customer',tables[0].name);
-		System.assertEquals('Customer',tables[0].label);
+		System.assertEquals('Customer', tables[0].name);
+		System.assertEquals('Customer', tables[0].label);
 	}
 
 	@IsTest
@@ -253,7 +253,8 @@ private class QuickbooksAdapterTests implements HttpCalloutMock {
 					'  }' +
 					'}'
 			);
-		} else if(req.getEndpoint().startsWith('callout:pushCustomers')) {
+		}
+		else if(req.getEndpoint().startsWith('callout:pushCustomers')) {
 			System.debug(LoggingLevel.WARN, 'Eval: ' + req.getBody());
 			if(req.getEndpoint().contains('query')) { // syncToken fetch
 				System.debug(LoggingLevel.WARN, 'SyncTokenFetch');
@@ -273,7 +274,8 @@ private class QuickbooksAdapterTests implements HttpCalloutMock {
 						'    "time": "2021-01-23T01:09:26.402-08:00"\n' +
 						'}'
 				);
-			} else { // pushrecords write
+			}
+			else { // pushrecords write
 				System.debug(LoggingLevel.WARN, 'ActualPush');
 				res.setBody(
 					'{\n' +

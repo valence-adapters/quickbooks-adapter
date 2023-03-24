@@ -26,8 +26,8 @@ SOFTWARE.
 /**
  * Open-source Valence Adapter (https://valence.app) designed to talk to the Quickbooks Online API.
  *
- * @see https://docs.valence.app
- * @see https://developer.intuit.com/app/developer/qbo/docs/get-started
+ * @see https ://docs.valence.app
+ * @see https ://developer.intuit.com/app/developer/qbo/docs/get-started
  *
  * Schema info is pulled from copies of two JSON files that are stored as static resources, and were originally pulled from:
  * https://static.developer.intuit.com/JSONObjects/EntityJsonObject_v1.json
@@ -39,7 +39,7 @@ global with sharing class QuickbooksAdapter implements valence.NamedCredentialAd
 	 * The expected datetime formatting that the API needs for Datetime literals (ISO 8601)
 	 */
 	public final static String API_DATETIME_FORMAT = 'yyyy-MM-dd\'T\'HH:mm:ssXXX';
-	public final static String API_MINOR_VERSION = '63';
+	public final static String API_MINOR_VERSION = '65';
 	public final static Set<String> OPERATIONS_REQUIRING_SYNC_TOKEN = new Set<String>{'update', 'delete'};
 	public final static Integer MAX_PAGE_SIZE = 1000;
 
@@ -167,10 +167,99 @@ global with sharing class QuickbooksAdapter implements valence.NamedCredentialAd
 			return;
 		}
 
-		// sending invoices to customers follows a different flow
-		if('SendInvoice'.equalsIgnoreCase(context.linkTargetName)) {
-			sendInvoiceEmails(records);
+		WritebackHelper helper = new WritebackHelper();
+		List<SObject> writebacks;
+
+		switch on context.linkTargetName {
+
+			when 'SendInvoice' { // sending invoices to customers uses a special endpoint
+				writebacks = sendInvoiceEmails(context, records, helper);
+			}
+
+			when else {
+				writebacks = sendRecords(context, records, helper);
+			}
 		}
+
+		/*
+		 * Now that we've interacted with Quickbooks, we might want to write back to Salesforce to update the original records.
+		 *
+		 * To be a bit more efficient and avoid needless updates, we will query for all the records we'd be writing to, and only write to them
+		 * if the values we have from quickbooks are actually different than what is already in Salesforce.
+		 */
+		if(!writebacks.isEmpty()) {
+			writebacks.sort(); // sorting arranges by SObjectType so we don't get into trouble with DML chunking
+			System.debug('-- WRITEBACKS --');
+			for(SObject obj : writebacks) {
+				System.debug(obj);
+			}
+
+			List<SObject> filtered = new List<SObject>();
+			for(SObject obj : writebacks) {
+				if(helper.isDifferent(obj)) {
+					filtered.add(obj);
+				}
+			}
+			System.debug('-- FILTERED WRITEBACKS --');
+			for(SObject obj : filtered) {
+				System.debug(obj);
+			}
+			if(!filtered.isEmpty()) {
+				update filtered;
+			}
+		}
+	}
+
+	/**
+	 * @param context Info about the send
+	 * @param records The invoices to send to Quickbooks for QBO to email out to customers
+	 * @param helper Utility class instance that will help track the config and the retrieved records
+	 *
+	 * @return A list of writebacks to be applied back into Salesforce
+	 */
+	private List<SObject> sendInvoiceEmails(valence.LinkContext context, List<valence.RecordInFlight> records, WritebackHelper helper) {
+
+		List<SObject> writebacks = new List<SObject>();
+
+		// tell QBO to send an invoice out to the customer; these must be done one per callout
+		for(valence.RecordInFlight record : records) {
+			if(record.hasProperty('Id')) {
+
+				HttpRequest req = buildRequest('invoice/' + record.getPropertyValue('Id') + '/send', null);
+
+				System.debug(LoggingLevel.WARN, req.getBody());
+
+				HttpResponse res = new Http().send(req);
+
+				System.debug(LoggingLevel.WARN, res.getStatusCode() + ':' + res.getStatus());
+				System.debug(LoggingLevel.WARN, res.getBody());
+
+				checkForHttpErrors(res);
+
+				valence.JSONParse parsedResponse = new valence.JSONParse(res.getBody());
+				Boolean success = applyResponse('Invoice', parsedResponse, record);
+				/*
+				 * If we successfully wrote to Quickbooks, update the record in Salesforce with any writebacks
+				 */
+				if(success == true) {
+					writebacks.addAll(calculateWritebacks(helper, context, parsedResponse.get('Invoice'), record));
+				}
+			}
+		}
+
+		return writebacks;
+	}
+
+	/**
+	 * Handles sending a collection of records to Quickbooks.
+	 *
+	 * @param context Info about the send
+	 * @param records The records to send to Quickbooks
+	 * @param helper Utility class instance that will help track the config and the retrieved records
+	 *
+	 * @return A list of writebacks to be applied back into Salesforce
+	 */
+	private List<SObject> sendRecords(valence.LinkContext context, List<valence.RecordInFlight> records, WritebackHelper helper) {
 
 		/*
 		 * We collect Quickbooks IDs for anything we need to update so we can fetch SyncToken values.
@@ -217,38 +306,18 @@ global with sharing class QuickbooksAdapter implements valence.NamedCredentialAd
 
 		List<valence.JSONParse> responses = new valence.JSONParse(res.getBody()).get('BatchItemResponse').asList();
 		List<SObject> writebacks = new List<SObject>();
-		WritebackHelper helper = new WritebackHelper();
+
 		for(Integer i = 0, j = responses.size(); i < j; i++) {
 			Boolean success = applyResponse(context.linkTargetName, responses[i], records[i]);
 			/*
-			 * If we successfully wrote to Quickbooks, update the record in Salesforce with its Quickbooks unique identifier
+			 * If we successfully wrote to Quickbooks, update the record in Salesforce with any writebacks
 			 */
 			if(success == true && !'delete'.equalsIgnoreCase(records[i].getOperation())) {
 				writebacks.addAll(calculateWritebacks(helper, context, responses[i].get(context.linkTargetName), records[i]));
 			}
 		}
 
-		if(!writebacks.isEmpty()) {
-			writebacks.sort(); // sorting arranges by SObjectType so we don't get into trouble with DML chunking
-			System.debug('-- WRITEBACKS --');
-			for(SObject obj : writebacks) {
-				System.debug(obj);
-			}
-
-			List<SObject> filtered = new List<SObject>();
-			for(SObject obj : writebacks) {
-				if(helper.isDifferent(obj)) {
-					filtered.add(obj);
-				}
-			}
-			System.debug('-- FILTERED WRITEBACKS --');
-			for(SObject obj : filtered) {
-				System.debug(obj);
-			}
-			if(!filtered.isEmpty()) {
-				update filtered;
-			}
-		}
+		return writebacks;
 	}
 
 	private List<SObject> calculateWritebacks(WritebackHelper helper, valence.LinkContext context, valence.JSONParse response, valence.RecordInFlight record) {
@@ -293,26 +362,6 @@ global with sharing class QuickbooksAdapter implements valence.NamedCredentialAd
 		}
 
 		return writebacks;
-	}
-
-	private void sendInvoiceEmails(List<valence.RecordInFlight> records) {
-
-		// tell QBO to send an invoice out to the customer; these must be done one per callout
-		for(valence.RecordInFlight record : records) {
-			if(record.hasProperty('Id')) {
-
-				HttpRequest req = buildRequest('invoice/' + record.getPropertyValue('Id') + '/send', null);
-
-				System.debug(LoggingLevel.WARN, req.getBody());
-
-				HttpResponse res = new Http().send(req);
-
-				System.debug(LoggingLevel.WARN, res.getStatusCode() + ':' + res.getStatus());
-				System.debug(LoggingLevel.WARN, res.getBody());
-
-				checkForHttpErrors(res);
-			}
-		}
 	}
 
 	// ----------------------------------------
@@ -470,7 +519,7 @@ global with sharing class QuickbooksAdapter implements valence.NamedCredentialAd
 
 	private static Boolean applyResponse(String entityName, valence.JSONParse response, valence.RecordInFlight record) {
 		Boolean success = true;
-		if(response.get('bId').getStringValue() != record.getSalesforceId()) {
+		if(response.exists('bId') && response.get('bId').getStringValue() != record.getSalesforceId()) {
 			record.addError('Response mismatch, response bId (' + response.get('bId').getStringValue() + ') does not match (' + record.getSalesforceId() + ').');
 			success = false;
 		}
@@ -495,7 +544,8 @@ global with sharing class QuickbooksAdapter implements valence.NamedCredentialAd
 			}
 			if('delete'.equalsIgnoreCase(record.getOperation())) { // problems deleting a record are bumped down to a warning, as it's possible they never existed or were already deleted
 				record.addWarning(errorMessage);
-			} else { // mark this record as unsuccessful
+			}
+			else { // mark this record as unsuccessful
 				record.addError(errorMessage);
 				success = false;
 			}
@@ -554,7 +604,9 @@ global with sharing class QuickbooksAdapter implements valence.NamedCredentialAd
 		req.setHeader('Content-Type', 'application/text');
 		req.setCompressed(true);
 		req.setEndpoint('callout:' + namedCredentialName + '/v3/company/' + realmId + '/' + partialUrl + '?minorversion=' + API_MINOR_VERSION);
-		req.setBody(body);
+		if(String.isNotBlank(body)) {
+			req.setBody(body);
+		}
 		return req;
 	}
 
