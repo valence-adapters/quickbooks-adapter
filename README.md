@@ -6,13 +6,6 @@ To learn more about developing extensions for the Valence platform, have a look 
 
 ## Installing
 
-This Adapter uses a Valence base LWC called <a href="https://github.com/valence-filters/valence-ui-configurator">Valence UI Configurator</a>. If you don't already have it in your org, you can install it with this first button:
-
-<a href="https://githubsfdeploy.herokuapp.com?owner=valence-filters&repo=ui-configurator-installer&ref=main">
-  <img alt="Deploy to Salesforce"
-       src="https://raw.githubusercontent.com/afawcett/githubsfdeploy/master/deploy.png">
-</a>
-
 Click this button to install the Quickbooks Adapter into your org.
 
 <a href="https://githubsfdeploy.herokuapp.com?owner=valence-filters&repo=quickbooks-adapter&ref=main">
