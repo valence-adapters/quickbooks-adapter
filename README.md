@@ -8,7 +8,7 @@ To learn more about developing extensions for the Valence platform, have a look 
 
 Click this button to install the Quickbooks Adapter into your org.
 
-<a href="https://githubsfdeploy.herokuapp.com?owner=valence-filters&repo=quickbooks-adapter&ref=main">
+<a href="https://githubsfdeploy.herokuapp.com?owner=valence-adapters&repo=quickbooks-adapter&ref=main">
   <img alt="Deploy to Salesforce"
        src="https://raw.githubusercontent.com/afawcett/githubsfdeploy/master/deploy.png">
 </a>
